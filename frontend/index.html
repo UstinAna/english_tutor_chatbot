@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Maya — English Practice</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="app-header">
+      <div class="header-left">
+        <span class="chalk-mark">✎</span>
+        <div>
+          <h1>Maya</h1>
+          <p class="subtitle">your English conversation partner</p>
+        </div>
+      </div>
+      <button id="reset-btn" class="ghost-btn" title="Start a new conversation">New session</button>
+    </header>
+
+    <main class="notebook" id="notebook">
+      <div class="entry system-entry">
+        <p>Say anything — tell Maya about your day, ask a question, practice for an interview.
+        She'll reply and gently note anything worth fixing in the margin.</p>
+      </div>
+    </main>
+
+    <footer class="composer">
+      <textarea id="input" placeholder="Type in English…" rows="1"></textarea>
+      <button id="send-btn" class="send-btn" title="Send">Send</button>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
