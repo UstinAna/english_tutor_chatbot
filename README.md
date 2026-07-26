@@ -1,31 +1,46 @@
 # 🎙️ AI English Tutor Chatbot
 
-A text-based conversational English tutor. You chat with **Maya**, an AI tutor
-powered by Claude, and she replies naturally while gently flagging grammar or
-phrasing mistakes as "margin notes" next to what you wrote — like a teacher
-annotating an essay, without breaking the flow of conversation.
+# 🎙️ AI English Tutor Chatbot
 
-Voice input/output is planned as a later phase; this version is text-only.
+A conversational English tutor. You chat with **Maya**, an AI tutor, and she
+replies naturally while gently flagging grammar or phrasing mistakes as
+"margin notes" next to what you wrote — like a teacher annotating an essay,
+without breaking the flow of conversation.
+
+Maya can run on **either Claude (Anthropic) or a Hugging Face-hosted open
+model** — pick one with a single setting in `.env`, no code changes needed.
+
+Speech input (mic) and text-to-speech replies are supported via the browser's
+built-in speech APIs — no extra services or cost.
 
 ## How it works
 
 ```
-Browser (static HTML/JS)  →  FastAPI backend  →  Claude (Anthropic API)
-        ↑__________________________|
+Browser (HTML/JS + Web Speech API)  →  FastAPI backend  →  Claude  or  Hugging Face
+        ↑______________________________________|         (LLM_PROVIDER in .env)
         JSON: { reply, corrections[] }
 ```
 
 - The frontend is plain HTML/CSS/JS — no build step required.
 - The backend is a small FastAPI app with one real endpoint, `/api/chat`,
   that keeps a short in-memory conversation history per session and asks
-  Claude for a structured JSON reply (conversational text + a list of
-  corrections).
+  the selected LLM for a structured JSON reply (conversational text + a
+  list of corrections). `tutor.py` picks the provider based on
+  `LLM_PROVIDER` and only initializes that one client.
 - FastAPI also serves the frontend directly, so the whole app runs from a
   single process.
+- Speech-to-text (mic button) and text-to-speech ("🔊 Speak replies" toggle)
+  run entirely in the browser via the Web Speech API — no backend involved,
+  no extra API key needed. Currently best supported in Chrome/Edge.
 
 ## Setup
 
-**1. Get an Anthropic API key** from [console.anthropic.com](https://console.anthropic.com).
+**1. Choose a provider and get credentials for it:**
+
+| `LLM_PROVIDER` value | Get credentials at | Notes |
+|---|---|---|
+| `anthropic` (default) | [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys) | Needs billing/credit set up on the account. More reliable JSON output. |
+| `huggingface` | [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) | Free tier available. "Read" access is enough. Smaller models are less consistent at following the JSON format — see notes below. |
 
 **2. Install dependencies:**
 
@@ -36,12 +51,20 @@ source venv/bin/activate      # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-**3. Add your API key:**
+**3. Configure `.env`:**
 
 ```bash
 cp .env.example .env
-# then edit .env and paste your key in place of the placeholder
 ```
+
+Then edit `.env`:
+- Set `LLM_PROVIDER` to `anthropic` or `huggingface`.
+- Fill in the API key/token for whichever one you picked (the other block
+  can stay as placeholder text — it's ignored).
+
+⚠️ Never commit `.env` or paste a real key/token into chat, a terminal
+command, or a commit message — treat it like a password. If one ever leaks,
+revoke it immediately and generate a new one.
 
 **4. Run it:**
 
@@ -57,7 +80,7 @@ Open **http://127.0.0.1:8000** in your browser.
 english_tutor_chatbot/
 ├── backend/
 │   ├── main.py          # FastAPI app + routes, serves the frontend
-│   ├── tutor.py         # System prompt, session memory, Claude calls
+│   ├── tutor.py         # System prompt, session memory, provider dispatch (Claude/HF)
 │   ├── requirements.txt
 │   └── .env.example
 ├── frontend/
@@ -99,12 +122,21 @@ english_tutor_chatbot/
   the top of `tutor.py`.
 - **CORS is wide open** (`allow_origins=["*"]`) for local development.
   Restrict it before deploying publicly.
-- **Model choice**: defaults to `claude-sonnet-5`. For lower cost/latency
-  during development, set `CLAUDE_MODEL=claude-haiku-4-5-20251001` in `.env`.
+- **Provider/model choice**: switch providers anytime via `LLM_PROVIDER` in
+  `.env` — no code changes needed. Override the specific model with
+  `ANTHROPIC_MODEL` (default `claude-sonnet-5`) or `HF_MODEL` (default
+  `Qwen/Qwen2.5-7B-Instruct`). Free-tier model availability and rate limits
+  on HF's Inference API change over time, so if the default HF model gives
+  errors or is unavailable, try another instruct model.
+- **JSON reliability**: smaller open models (typical on HF's free tier)
+  follow the "reply as strict JSON" instruction less consistently than
+  Claude does. `tutor.py` has a fallback that shows the raw reply as plain
+  text (no corrections) if JSON parsing fails — you may see this happen
+  occasionally with `huggingface` as the provider.
 
 ## Roadmap
 
-- [ ] Speech-to-text input (Whisper or browser Web Speech API)
-- [ ] Text-to-speech replies
+- [x] Speech-to-text input (browser Web Speech API)
+- [x] Text-to-speech replies (browser speechSynthesis)
 - [ ] Vocabulary tracking across sessions
 - [ ] Difficulty/level selector
