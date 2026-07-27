@@ -1,7 +1,5 @@
 # 🎙️ AI English Tutor Chatbot
 
-# 🎙️ AI English Tutor Chatbot
-
 A conversational English tutor. You chat with **Maya**, an AI tutor, and she
 replies naturally while gently flagging grammar or phrasing mistakes as
 "margin notes" next to what you wrote — like a teacher annotating an essay,
@@ -40,7 +38,7 @@ Browser (HTML/JS + Web Speech API)  →  FastAPI backend  →  Claude  or  Huggi
 | `LLM_PROVIDER` value | Get credentials at | Notes |
 |---|---|---|
 | `anthropic` (default) | [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys) | Needs billing/credit set up on the account. More reliable JSON output. |
-| `huggingface` | [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) | Free tier available. "Read" access is enough. Smaller models are less consistent at following the JSON format — see notes below. |
+| `huggingface` | [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) | Free tier available. **Create a "Custom" token and check only "Inference → Make calls to Inference Providers."** A plain Read-Only token is *not* sufficient — it authenticates fine but gets a 403 when actually calling inference. Smaller models are also less consistent at following the JSON format — see notes below. |
 
 **2. Install dependencies:**
 
@@ -73,6 +71,36 @@ uvicorn main:app --reload
 ```
 
 Open **http://127.0.0.1:8000** in your browser.
+
+## Troubleshooting
+
+- **`invalid x-api-key` (Anthropic)** — your `.env` still has the placeholder
+  text instead of a real key, or you're running uvicorn from the repo root
+  instead of `backend/` (so `.env` never gets picked up).
+- **`TypeError: Client.__init__() got an unexpected keyword argument 'proxies'`**
+  — version mismatch between `anthropic` and `httpx` in your Python
+  environment (common in shared/conda environments). Fix: `pip install -U anthropic`.
+- **`NameResolutionError` / can't resolve `api-inference.huggingface.co`**
+  — this endpoint is deprecated. Make sure `huggingface_hub>=0.30.0` is
+  installed (`pip install -U huggingface_hub`) so the client routes through
+  the current Inference Providers system instead.
+- **`403 Forbidden: ... does not have sufficient permissions to call
+  Inference Providers`** — your HF token exists and authenticates, but
+  wasn't scoped for inference. Generate a new **Custom** token with
+  **"Make calls to Inference Providers"** checked (see the setup table
+  above) — Read-Only tokens don't include this by default.
+- **`TypeError: InferenceClient.__init__() got an unexpected keyword
+  argument 'provider'`** after upgrading `huggingface_hub` — a stale
+  `uvicorn --reload` process is still running with the old library loaded
+  in memory. Kill it (`pkill -f uvicorn`, check `lsof -i :8000`) and start
+  fresh.
+- **`Could not import module "main"`** — you're running `uvicorn main:app`
+  from the wrong folder. It must be run from inside `backend/`, not the
+  repo root.
+- **Response hangs on "Maya is typing…" for a long time** — free-tier
+  Inference Providers can have real cold-start delay (tens of seconds) the
+  first time a lightly-used model gets a request. Check your backend
+  terminal for errors before assuming it's stuck.
 
 ## Project structure
 
@@ -125,9 +153,11 @@ english_tutor_chatbot/
 - **Provider/model choice**: switch providers anytime via `LLM_PROVIDER` in
   `.env` — no code changes needed. Override the specific model with
   `ANTHROPIC_MODEL` (default `claude-sonnet-5`) or `HF_MODEL` (default
-  `Qwen/Qwen2.5-7B-Instruct`). Free-tier model availability and rate limits
-  on HF's Inference API change over time, so if the default HF model gives
-  errors or is unavailable, try another instruct model.
+  `Qwen/Qwen2.5-7B-Instruct`). Not every model on the Hub is available via
+  Inference Providers — check a model's page on huggingface.co for an
+  "Inference Providers" widget before setting `HF_MODEL` to it. Free-tier
+  availability and rate limits change over time, so if the default HF model
+  gives errors or is unavailable, try another instruct model from that list.
 - **JSON reliability**: smaller open models (typical on HF's free tier)
   follow the "reply as strict JSON" instruction less consistently than
   Claude does. `tutor.py` has a fallback that shows the raw reply as plain

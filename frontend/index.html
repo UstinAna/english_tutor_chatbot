@@ -16,7 +16,13 @@
           <p class="subtitle">your English conversation partner</p>
         </div>
       </div>
-      <button id="reset-btn" class="ghost-btn" title="Start a new conversation">New session</button>
+      <div class="header-right">
+        <label class="voice-toggle" title="Have Maya read her replies aloud">
+          <input type="checkbox" id="speak-toggle" />
+          <span>🔊 Speak replies</span>
+        </label>
+        <button id="reset-btn" class="ghost-btn" title="Start a new conversation">New session</button>
+      </div>
     </header>
 
     <main class="notebook" id="notebook">
@@ -27,7 +33,8 @@
     </main>
 
     <footer class="composer">
-      <textarea id="input" placeholder="Type in English…" rows="1"></textarea>
+      <button id="mic-btn" class="mic-btn" title="Speak instead of typing">🎤</button>
+      <textarea id="input" placeholder="Type in English… or tap the mic" rows="1"></textarea>
       <button id="send-btn" class="send-btn" title="Send">Send</button>
     </footer>
   </div>
